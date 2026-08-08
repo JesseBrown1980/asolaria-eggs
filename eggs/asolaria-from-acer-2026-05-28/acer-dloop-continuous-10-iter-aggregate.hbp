@@ -1,0 +1,13 @@
+DLOOP-CONTINUOUS-AGGREGATE|cascade=dloop-continuous-1780006438533|chain_range=3509-3520|iter_count=10|ts=2026-05-28T22:20:00Z
+START|seq=3509|cadence_ms=20000|max_iter=10|agents_per_q=50000|seed_qs=5
+ITER|seq=3510|iter=1|qs=5|agents=250000|genius=12596|mistake=12451|coll=0|exec=0|rate=189538|cum_agents=250000
+ITER|seq=3511|iter=2|qs=5|agents=250000|genius=12510|mistake=12294|coll=0|exec=0|rate=169607|cum_agents=500000
+ITER|seq=3512|iter=3|qs=5|agents=250000|genius=12351|mistake=12503|coll=0|exec=0|rate=206271|cum_agents=750000
+ITER|seq=3513|iter=4|qs=5|agents=250000|genius=12328|mistake=12624|coll=0|exec=0|rate=126390|cum_agents=1000000
+ITER|seq=3514|iter=5|qs=5|agents=250000|genius=12394|mistake=12504|coll=0|exec=0|rate=147232|cum_agents=1250000
+ITER|seq=3515|iter=6|qs=5|agents=250000|genius=12410|mistake=12482|coll=0|exec=0|rate=152625|cum_agents=1500000
+ITER|seq=3516|iter=7|qs=5|agents=250000|genius=12519|mistake=12521|coll=0|exec=0|rate=170300|cum_agents=1750000
+ITER|seq=3517|iter=8|qs=5|agents=250000|genius=12484|mistake=12693|coll=0|exec=0|rate=164474|cum_agents=2000000
+ITER|seq=3518|iter=9|qs=5|agents=250000|genius=12510|mistake=12437|coll=0|exec=0|rate=125125|cum_agents=2250000
+ITER|seq=3519|iter=10|qs=5|agents=250000|genius=12397|mistake=12697|coll=0|exec=0|rate=159033|cum_agents=2500000
+COMPLETE|seq=3520|cum_agents=2500000|cum_genius=124499|cum_mistake=125206|cum_collisions=0|cum_executes=0|stop_reason=max_iter_reached

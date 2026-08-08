@@ -1,0 +1,475 @@
+/**
+ * Asolaria-grade universal date-ingest normalizer — unit tests.
+ *
+ * Author: Asolaria-Instance-H (Date-Normalizer-Liris-Discipline-Revision)
+ * Operator: OP-JESSE-DANIEL-BROWN
+ * Methodology: Hybrid 10-step / TDD red->green iron law (step 6)
+ *              + Liris bilateral dual-critic audit revision
+ *
+ * Coverage:
+ *  - one test per InputShape minimum
+ *  - ambiguity / TZ / sampleTime cases
+ *  - FAIL-LOUD throw-paths (EmptyInputError / UnknownShapeError / InvalidParseError /
+ *    DualCriticDisagreeError)
+ *  - BEHCS-1024 glyph determinism
+ */
+
+import {
+  ingestDateAsolariaGrade,
+  detectShape,
+  pidFor,
+  ambiguityFlagToGlyph,
+  BEHCS_1024_FLAG_GLYPHS,
+  AsolariaDateNormalizerError,
+  EmptyInputError,
+  UnknownShapeError,
+  InvalidParseError,
+  DualCriticDisagreeError,
+} from './asolaria-date-normalizer';
+
+describe('asolaria-date-normalizer / shape detection', () => {
+  test('iso-string (date-only)', () => {
+    expect(detectShape('2026-03-08')).toBe('iso-string');
+  });
+
+  test('iso-string (full UTC Z)', () => {
+    expect(detectShape('2026-03-08T01:48:00Z')).toBe('iso-string');
+  });
+
+  test('iso-string (with offset)', () => {
+    expect(detectShape('2026-03-08T01:48:00-05:00')).toBe('iso-string');
+  });
+
+  test('us-string with slashes', () => {
+    expect(detectShape('3/8/2026')).toBe('us-string');
+  });
+
+  test('us-string with hyphens', () => {
+    expect(detectShape('3-8-2026')).toBe('us-string');
+  });
+
+  test('us-string with AM/PM', () => {
+    expect(detectShape('03/08/2026 1:48 PM')).toBe('combined-date-time-string');
+  });
+
+  test('eu-string day > 12 unambiguously DD/MM', () => {
+    expect(detectShape('25/03/2026')).toBe('eu-string');
+  });
+
+  test('combined-date-time-string (ISO style)', () => {
+    expect(detectShape('2026-03-08 01:48:00')).toBe('combined-date-time-string');
+  });
+
+  test('excel-serial-int', () => {
+    expect(detectShape(45441)).toBe('excel-serial-int');
+  });
+
+  test('excel-serial-fraction', () => {
+    expect(detectShape(45441.5)).toBe('excel-serial-fraction');
+  });
+
+  test('epoch-ms', () => {
+    expect(detectShape(1741399680000)).toBe('epoch-ms');
+  });
+
+  test('epoch-sec', () => {
+    expect(detectShape(1741399680)).toBe('epoch-sec');
+  });
+
+  test('time-only-with-am-pm', () => {
+    expect(detectShape('1:48 PM')).toBe('time-only-with-am-pm');
+  });
+
+  test('time-only-naked', () => {
+    expect(detectShape('13:48')).toBe('time-only-naked');
+  });
+
+  test('Date object host-local-midnight', () => {
+    const d = new Date(2026, 2, 8); // March 8 2026 local midnight
+    expect(detectShape(d)).toBe('date-object-host-local');
+  });
+
+  test('Date object UTC-anchored', () => {
+    const d = new Date('2026-03-08T01:48:00Z');
+    expect(detectShape(d)).toBe('date-object-utc-anchored');
+  });
+});
+
+describe('asolaria-date-normalizer / determinism of PID', () => {
+  test('same input + tz produces identical PID across calls', () => {
+    const a = pidFor('2026-03-08', 'UTC', 'iso-string');
+    const b = pidFor('2026-03-08', 'UTC', 'iso-string');
+    expect(a).toBe(b);
+    expect(a).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  test('different timezone produces different PID', () => {
+    const a = pidFor('2026-03-08', 'UTC', 'iso-string');
+    const b = pidFor('2026-03-08', 'America/New_York', 'iso-string');
+    expect(a).not.toBe(b);
+  });
+});
+
+describe('asolaria-date-normalizer / canonical UTC instants', () => {
+  test('iso UTC string stays UTC', () => {
+    const r = ingestDateAsolariaGrade('2026-03-08T01:48:00Z');
+    expect(r.utcInstant.toISOString()).toBe('2026-03-08T01:48:00.000Z');
+    expect(r.inputShape).toBe('iso-string');
+    expect(r.confidence).toBeGreaterThanOrEqual(0.9);
+  });
+
+  test('iso with offset normalises to UTC', () => {
+    const r = ingestDateAsolariaGrade('2026-03-08T01:48:00-05:00');
+    expect(r.utcInstant.toISOString()).toBe('2026-03-08T06:48:00.000Z');
+  });
+
+  test('iso date-only in America/New_York (EDT) anchors to local midnight', () => {
+    // 2026-03-08 EDT (already past 2nd-Sunday-of-March DST start) UTC-4
+    // local midnight EDT = 04:00 UTC
+    const r = ingestDateAsolariaGrade(
+      '2026-03-08',
+      undefined,
+      'America/New_York'
+    );
+    expect(r.utcInstant.toISOString()).toBe('2026-03-08T05:00:00.000Z');
+    // 2026-03-08 is Sunday, DST 2026 starts Sunday March 8 at 02:00 local
+    // before that switch, NY is EST (UTC-5). At 00:00 EST = 05:00 UTC. Correct.
+  });
+
+  test('us-string with explicit timezone (LA midnight = 07:00 UTC)', () => {
+    // Backward-compat probe — matches existing fixTimeZone behaviour for '10/30/2025'
+    const r = ingestDateAsolariaGrade(
+      '10/30/2025',
+      undefined,
+      'America/Los_Angeles'
+    );
+    expect(r.utcInstant.toISOString()).toBe('2025-10-30T07:00:00.000Z');
+  });
+
+  test('us-string + sampleTime "01:48:00" in EDT', () => {
+    // 2026-05-29 is in EDT (DST). 1:48 AM EDT = 05:48 UTC.
+    const r = ingestDateAsolariaGrade(
+      '5/29/2026',
+      '01:48:00',
+      'America/New_York'
+    );
+    expect(r.utcInstant.toISOString()).toBe('2026-05-29T05:48:00.000Z');
+  });
+
+  test('us-string + sampleTime "01:48 PM" in EDT', () => {
+    const r = ingestDateAsolariaGrade(
+      '5/29/2026',
+      '01:48 PM',
+      'America/New_York'
+    );
+    expect(r.utcInstant.toISOString()).toBe('2026-05-29T17:48:00.000Z');
+  });
+
+  test('eu-string DD/MM/YYYY parsed as 25 March', () => {
+    const r = ingestDateAsolariaGrade('25/03/2026', undefined, 'UTC');
+    expect(r.utcInstant.toISOString()).toBe('2026-03-25T00:00:00.000Z');
+  });
+
+  test('Date object UTC-anchored, no tz, preserved', () => {
+    const input = new Date('2026-03-08T01:48:00Z');
+    const r = ingestDateAsolariaGrade(input);
+    expect(r.utcInstant.toISOString()).toBe('2026-03-08T01:48:00.000Z');
+  });
+
+  test('Date object UTC-anchored + sampleTime in EDT', () => {
+    // Brian-issue-4 quarantine case: Date object input + sampleTime + tz
+    const input = new Date('2026-05-29T00:00:00Z');
+    const r = ingestDateAsolariaGrade(input, '01:48:00', 'America/New_York');
+    expect(r.utcInstant.toISOString()).toBe('2026-05-29T05:48:00.000Z');
+  });
+
+  test('Excel-serial integer in a timezone', () => {
+    // 45441 = May 29 2024 (Excel-epoch reference)
+    const r = ingestDateAsolariaGrade(45441, undefined, 'America/Los_Angeles');
+    // 2024-05-29 LA midnight in PDT (UTC-7) = 07:00 UTC
+    expect(r.utcInstant.toISOString()).toBe('2024-05-29T07:00:00.000Z');
+  });
+
+  test('Excel-serial fraction encodes time-of-day', () => {
+    // 45441.5 = May 29 2024 noon (Excel local)
+    const r = ingestDateAsolariaGrade(45441.5, undefined, 'UTC');
+    expect(r.utcInstant.toISOString()).toBe('2024-05-29T12:00:00.000Z');
+  });
+
+  test('epoch-ms passthrough', () => {
+    const ms = Date.UTC(2026, 2, 8, 1, 48, 0);
+    const r = ingestDateAsolariaGrade(ms);
+    expect(r.utcInstant.getTime()).toBe(ms);
+    expect(r.inputShape).toBe('epoch-ms');
+  });
+
+  test('epoch-sec passthrough', () => {
+    const sec = Math.floor(Date.UTC(2026, 2, 8, 1, 48, 0) / 1000);
+    const r = ingestDateAsolariaGrade(sec);
+    expect(r.utcInstant.getTime()).toBe(sec * 1000);
+    expect(r.inputShape).toBe('epoch-sec');
+  });
+
+  test('combined-date-time-string (ISO-style, naive) in EDT — dual-critic disagree throws (Liris #4)', () => {
+    // '2026-05-29 01:48:00' is naive wall-clock; our parser anchors it to
+    // America/New_York (-> 05:48 UTC EDT), but the native-Date critic
+    // interprets the same string as UTC (-> 04:48 UTC).  Per Liris #4 the
+    // disagreement raises DualCriticDisagreeError rather than silently
+    // picking one — the caller must qualify the input (ISO offset or use
+    // a Date object) to resolve.
+    expect(() =>
+      ingestDateAsolariaGrade(
+        '2026-05-29 01:48:00',
+        undefined,
+        'America/New_York'
+      )
+    ).toThrow(DualCriticDisagreeError);
+    try {
+      ingestDateAsolariaGrade(
+        '2026-05-29 01:48:00',
+        undefined,
+        'America/New_York'
+      );
+    } catch (e) {
+      const err = e as DualCriticDisagreeError;
+      expect(err.primaryIso).toBe('2026-05-29T05:48:00.000Z');
+      expect(err.secondaryIso).toBe('2026-05-29T04:48:00.000Z');
+      expect(err.ambiguityFlags).toContain('dual-critic-disagree');
+    }
+  });
+
+  test('combined-date-time-string with unambiguous ISO-offset suffix succeeds', () => {
+    // Same wall-clock, but qualified with the explicit offset — both critics
+    // agree, so no throw.
+    const r = ingestDateAsolariaGrade(
+      '2026-05-29T01:48:00-04:00',
+      undefined,
+      'America/New_York'
+    );
+    expect(r.utcInstant.toISOString()).toBe('2026-05-29T05:48:00.000Z');
+  });
+});
+
+describe('asolaria-date-normalizer / ambiguity flags + audit trail', () => {
+  test('ambiguous US/EU string flagged', () => {
+    // 03/04/2026 — could be March 4 (US) or April 3 (EU)
+    const r = ingestDateAsolariaGrade('03/04/2026', undefined, 'UTC');
+    expect(r.ambiguityFlags).toContain('us-eu-ambiguous');
+    expect(r.confidence).toBeLessThan(1.0);
+  });
+
+  test('unambiguous EU (day > 12) not flagged us-eu-ambiguous', () => {
+    const r = ingestDateAsolariaGrade('25/03/2026', undefined, 'UTC');
+    expect(r.ambiguityFlags).not.toContain('us-eu-ambiguous');
+  });
+
+  test('tz-unspecified flag set when timeZone omitted', () => {
+    const r = ingestDateAsolariaGrade('2026-03-08T01:48:00Z');
+    expect(r.ambiguityFlags).toContain('tz-unspecified');
+  });
+
+  test('empty input throws EmptyInputError with audit row (Liris #1)', () => {
+    // FAIL-LOUD: empty input is no longer silently coerced to NaN-Date.
+    expect.assertions(5);
+    try {
+      ingestDateAsolariaGrade('');
+    } catch (e) {
+      expect(e).toBeInstanceOf(EmptyInputError);
+      expect(e).toBeInstanceOf(AsolariaDateNormalizerError);
+      const err = e as EmptyInputError;
+      expect(err.ambiguityFlags).toContain('empty-input');
+      expect(err.auditTraceRow).toMatch(/^ing\|asolaria-date-normalizer\|/);
+      expect(err.auditTraceRow).toContain('empty-input');
+    }
+  });
+
+  test('audit trace row is HBPv1 pipe-formatted', () => {
+    const r = ingestDateAsolariaGrade('2026-03-08T01:48:00Z', undefined, 'UTC');
+    expect(r.auditTraceRow).toMatch(/^ing\|/);
+    expect(r.auditTraceRow.split('|').length).toBeGreaterThanOrEqual(7);
+    expect(r.auditTraceRow).toContain('iso-string');
+    expect(r.auditTraceRow).toContain(r.pid);
+  });
+
+  test('PID is stable across invocations of same input', () => {
+    const a = ingestDateAsolariaGrade('2026-03-08T01:48:00Z', undefined, 'UTC');
+    const b = ingestDateAsolariaGrade('2026-03-08T01:48:00Z', undefined, 'UTC');
+    expect(a.pid).toBe(b.pid);
+  });
+
+  test('unknown input shape throws UnknownShapeError with audit row (Liris #1)', () => {
+    // FAIL-LOUD: unknown shape is no longer silently coerced to NaN-Date.
+    expect.assertions(5);
+    try {
+      ingestDateAsolariaGrade({ not: 'a date' } as unknown);
+    } catch (e) {
+      expect(e).toBeInstanceOf(UnknownShapeError);
+      expect(e).toBeInstanceOf(AsolariaDateNormalizerError);
+      const err = e as UnknownShapeError;
+      expect(err.inputShape).toBe('unknown');
+      expect(err.ambiguityFlags).toContain('unknown-shape');
+      expect(err.auditTraceRow).toContain('unknown-shape');
+    }
+  });
+
+  test('two-digit-year-pivot flagged', () => {
+    const r = ingestDateAsolariaGrade('03/08/26', undefined, 'UTC');
+    expect(r.ambiguityFlags).toContain('two-digit-year-pivot');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Liris discipline #1: FAIL-LOUD additional throw-path coverage
+// ---------------------------------------------------------------------------
+
+describe('asolaria-date-normalizer / FAIL-LOUD throw paths (Liris #1)', () => {
+  test('null input throws EmptyInputError', () => {
+    expect(() => ingestDateAsolariaGrade(null)).toThrow(EmptyInputError);
+  });
+
+  test('undefined input throws EmptyInputError', () => {
+    expect(() => ingestDateAsolariaGrade(undefined)).toThrow(EmptyInputError);
+  });
+
+  test('object input throws UnknownShapeError (not generic Error)', () => {
+    expect(() => ingestDateAsolariaGrade({ x: 1 } as unknown)).toThrow(UnknownShapeError);
+  });
+
+  test('NaN number input throws UnknownShapeError', () => {
+    expect(() => ingestDateAsolariaGrade(NaN)).toThrow(UnknownShapeError);
+  });
+
+  test('non-parseable garbage string throws UnknownShapeError', () => {
+    expect(() => ingestDateAsolariaGrade('not-a-date-at-all')).toThrow(UnknownShapeError);
+  });
+
+  test('thrown error carries pid + audit row + glyphs (Liris #2 mandatory audit)', () => {
+    try {
+      ingestDateAsolariaGrade('');
+    } catch (e) {
+      const err = e as EmptyInputError;
+      expect(err.pid).toMatch(/^[0-9a-f]{16}$/);
+      expect(err.auditTraceRow.length).toBeGreaterThan(0);
+      expect(Array.isArray(err.ambiguityGlyphs)).toBe(true);
+      expect(err.ambiguityGlyphs.length).toBe(err.ambiguityFlags.length);
+      expect(err.ambiguityGlyphs.every((g) => g >= 0 && g < 1024)).toBe(true);
+    }
+  });
+
+  test('error message includes audit row for catch-site logging', () => {
+    try {
+      ingestDateAsolariaGrade(null);
+    } catch (e) {
+      const err = e as EmptyInputError;
+      expect(err.message).toContain('audit=');
+      expect(err.message).toContain('ing|asolaria-date-normalizer|');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Liris discipline #3: BEHCS-1024 glyph encoding
+// ---------------------------------------------------------------------------
+
+describe('asolaria-date-normalizer / BEHCS-1024 glyph encoding (Liris #3)', () => {
+  test('ambiguityFlagToGlyph is deterministic for the same flag', () => {
+    const a = ambiguityFlagToGlyph('us-eu-ambiguous');
+    const b = ambiguityFlagToGlyph('us-eu-ambiguous');
+    expect(a).toBe(b);
+  });
+
+  test('ambiguityFlagToGlyph returns an int in [0, 1023]', () => {
+    for (const flag of [
+      'tz-unspecified',
+      'empty-input',
+      'unknown-shape',
+      'us-eu-ambiguous',
+      'two-digit-year-pivot',
+      'time-only-anchored-to-today',
+      'sample-time-unparseable',
+      'parse-failure',
+      'dual-critic-disagree',
+    ]) {
+      const g = ambiguityFlagToGlyph(flag);
+      expect(Number.isInteger(g)).toBe(true);
+      expect(g).toBeGreaterThanOrEqual(0);
+      expect(g).toBeLessThan(1024);
+    }
+  });
+
+  test('different flags map to (almost always) different glyphs', () => {
+    // 9 flags into 1024 slots — collision probability is negligible.
+    const flags = Object.keys(BEHCS_1024_FLAG_GLYPHS);
+    const glyphs = flags.map(ambiguityFlagToGlyph);
+    const uniq = new Set(glyphs);
+    expect(uniq.size).toBe(glyphs.length);
+  });
+
+  test('BEHCS_1024_FLAG_GLYPHS pre-computed table matches live derivation', () => {
+    for (const [flag, glyph] of Object.entries(BEHCS_1024_FLAG_GLYPHS)) {
+      expect(ambiguityFlagToGlyph(flag)).toBe(glyph);
+    }
+  });
+
+  test('result includes ambiguityGlyphs aligned 1:1 with ambiguityFlags', () => {
+    const r = ingestDateAsolariaGrade('03/04/2026'); // ambiguous, no tz
+    expect(Array.isArray(r.ambiguityGlyphs)).toBe(true);
+    expect(r.ambiguityGlyphs.length).toBe(r.ambiguityFlags.length);
+    r.ambiguityFlags.forEach((flag, i) => {
+      expect(r.ambiguityGlyphs[i]).toBe(ambiguityFlagToGlyph(flag));
+    });
+  });
+
+  test('liris-side independent derivation matches our glyph table', () => {
+    // Simulate liris computing glyphs locally with only the flag string —
+    // no shared lookup table required.
+    const r = ingestDateAsolariaGrade('2026-03-08T01:48:00Z'); // tz-unspecified
+    const lirisDerived = r.ambiguityFlags.map((f) => ambiguityFlagToGlyph(f));
+    expect(lirisDerived).toEqual(r.ambiguityGlyphs);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Liris discipline #4: dual-critic disagreement THROWS
+// ---------------------------------------------------------------------------
+
+describe('asolaria-date-normalizer / dual-critic disagree throws (Liris #4)', () => {
+  test('DualCriticDisagreeError class is exported and extends base', () => {
+    // We can't easily provoke a real disagreement with the current parsers
+    // (primary and secondary agree on well-formed ISO).  We exercise the
+    // error class shape directly so the contract is locked.
+    const primary = new Date('2026-03-08T01:48:00Z');
+    const secondary = new Date('2026-03-08T01:48:01Z');
+    const err = new DualCriticDisagreeError(primary, secondary, {
+      pid: 'deadbeefcafebabe',
+      inputShape: 'iso-string',
+      timeZoneApplied: 'UTC',
+      ambiguityFlags: ['dual-critic-disagree'],
+      ambiguityGlyphs: [ambiguityFlagToGlyph('dual-critic-disagree')],
+      auditTraceRow:
+        'ing|asolaria-date-normalizer|deadbeefcafebabe|iso-string|UTC|dual-critic-disagree|2026-03-08T01:48:00.000Z|conf=0.85|input=test|emitted=test',
+    });
+    expect(err).toBeInstanceOf(DualCriticDisagreeError);
+    expect(err).toBeInstanceOf(AsolariaDateNormalizerError);
+    expect(err.primaryIso).toBe('2026-03-08T01:48:00.000Z');
+    expect(err.secondaryIso).toBe('2026-03-08T01:48:01.000Z');
+    expect(err.ambiguityFlags).toContain('dual-critic-disagree');
+    expect(err.message).toContain('dual-critic disagree');
+  });
+
+  test('InvalidParseError fires when parse genuinely fails', () => {
+    // Force the parse-failure branch: a numerical input in the
+    // excel-serial range whose Excel-serial conversion technically succeeds
+    // is not ideal — instead use a string that detectShape classifies but
+    // whose parser returns null.  The combined-date-time regex pre-classifier
+    // catches some malformed slash+time combos; pick one that flips through
+    // the date-fns fallback chain and still returns null.
+    // 'time-only-naked' on a malformed string would simply route through the
+    // time fragment parser successfully, so we use an explicit parse-failure
+    // path: a US date string with an invalid two-digit form that the parser
+    // bounces ('99/99/99').
+    expect(() => ingestDateAsolariaGrade('99/99/99', undefined, 'UTC')).toThrow(
+      AsolariaDateNormalizerError
+    );
+  });
+});

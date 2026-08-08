@@ -1,0 +1,10 @@
+QPRISM_SPANISHBCBL_SCHEDULE_HDR|steps=32|tuple_sha256=7be9d49b3af31036ccce106658588309d8fb808aaf546cbf7c92baaa1cd3767d|raw_in_repo=0|json=0
+QPRISM_SPANISHBCBL_SCHEDULE|step=0|p2Mw=9.713931|velocityCenterMps=153.818479|velocityHalfWidthMps=7|massCenterKDa=171.910735|massHalfWidthKDa=11.991531|analysisWindow=0.643374|json=0
+QPRISM_SPANISHBCBL_SCHEDULE|step=1|p2Mw=9.705539|velocityCenterMps=155.048356|velocityHalfWidthMps=7.056031|massCenterKDa=167.702907|massHalfWidthKDa=13.410986|analysisWindow=0.656912|json=0
+QPRISM_SPANISHBCBL_SCHEDULE|step=2|p2Mw=16.368986|velocityCenterMps=154.719066|velocityHalfWidthMps=19.990433|massCenterKDa=171.925566|massHalfWidthKDa=13.718883|analysisWindow=0.686935|json=0
+QPRISM_SPANISHBCBL_SCHEDULE|step=3|p2Mw=15.774632|velocityCenterMps=134.135683|velocityHalfWidthMps=26.671321|massCenterKDa=160.918746|massHalfWidthKDa=5|analysisWindow=0.654588|json=0
+QPRISM_SPANISHBCBL_SCHEDULE|step=4|p2Mw=16.411452|velocityCenterMps=134.176944|velocityHalfWidthMps=20.921721|massCenterKDa=167.710597|massHalfWidthKDa=5.042573|analysisWindow=0.663861|json=0
+QPRISM_SPANISHBCBL_SCHEDULE|step=5|p2Mw=15.25346|velocityCenterMps=172.31107|velocityHalfWidthMps=20.910735|massCenterKDa=168.484596|massHalfWidthKDa=14.676631|analysisWindow=0.709298|json=0
+QPRISM_SPANISHBCBL_SCHEDULE|step=6|p2Mw=15.780003|velocityCenterMps=162.153079|velocityHalfWidthMps=21.754498|massCenterKDa=154.061524|massHalfWidthKDa=14.690913|analysisWindow=0.620233|json=0
+QPRISM_SPANISHBCBL_SCHEDULE|step=7|p2Mw=16.360258|velocityCenterMps=166.815503|velocityHalfWidthMps=20.406455|massCenterKDa=154.103273|massHalfWidthKDa=16.218036|analysisWindow=0.62031|json=0
+QPRISM_SPANISHBCBL_SCHEDULE_FTR|shown_steps=8|full_schedule_reproducible_from_tuple=1|json=0

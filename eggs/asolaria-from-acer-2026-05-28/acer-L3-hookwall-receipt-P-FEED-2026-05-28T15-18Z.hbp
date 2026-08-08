@@ -1,0 +1,7 @@
+L3-HOOKWALL-RECEIPT|schema=ACER-STAGE-C-L3-HOOKWALL-RECEIPT-V1|label=p-feed-bias-100b-harvest|generatedAt=2026-05-28T15:18:45.086Z|promotion_layer=L3_hookwall_gate_complete|vantage=acer|sha16=l3_hdr
+INPUT|path=C:/Users/acer/Asolaria/data/behcs/loop-1m-1e200/stage-c-bias-seeds/stage-a-bias-seed-from-100b-harve|sha16=c55afb5ae5cfec45|bytes=8522|rows=42|sha16=l3_input
+PRE-EMIT-CHECK|verdict=PASS_SYCOPHANCY_SUSPECT|both_pass=true|critic_a_score=1.000|critic_b_score=1.000|score_gap=0|sycophancy_suspect=true|sha16=l3_pre
+EMIT-STATS|rowCount=42|kindCount=11|shaEntropy=5.037|shaSamples=38|totalBytes=8480|sha16=l3_emit
+POST-EMIT-CHECK|verdict=PASS_SYCOPHANCY_SUSPECT|both_pass=true|critic_a_score=1.000|critic_b_score=1.000|regression_stable=true|sha16=l3_post
+HOOKWALL-EVENT|chain_endpoint=http://127.0.0.1:4953/api/cosign/append|seq=3402|row_hash=4c1eeaa2a266b027|ok=true|sha16=l3_hook
+VERDICT|gate_pass=true|reason=pre_pass_and_post_pass_and_regression_stable|sha16=l3_verdict

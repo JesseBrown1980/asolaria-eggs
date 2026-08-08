@@ -1,0 +1,50 @@
+{
+  "schema": "HOSTNODE-FEDENV-OMNIDISPATCHER-v1",
+  "ts": "2026-05-22T20:21:26Z",
+  "runtime": 0,
+  "promote": 0,
+  "daemon_spawn": 0,
+  "advisor": {
+    "verdict": "GUIDED-EXECUTE",
+    "audit_row_hash": "f1cdd102fa5f4d8b"
+  },
+  "ports": {
+    "fedenv_bus": 4947,
+    "http_mirror": 4950,
+    "sister_hot_standby": 4956
+  },
+  "slot_population": {
+    "cli": 9,
+    "remote_vantage_citizens": 22,
+    "meta_supervisors": 6,
+    "antigravity_picker_models": 7,
+    "google_surface_bindings": 37,
+    "daemon_proxy_slots": 341,
+    "reserve_fractal_subagents": 578,
+    "total": 1000
+  },
+  "rings": [
+    "8 supervisors",
+    "47D anchors",
+    "transport routers",
+    "model/provider workers",
+    "1000 heartbeat pool",
+    "nested FEDENV federation"
+  ],
+  "boundaries": [
+    "no daemon restart",
+    "no 1000 spawn",
+    "no MCP/WebMCP enable",
+    "no USB write",
+    "no Atlas cp mint",
+    "no runtime promotion",
+    "no depth-3 SDK recursion"
+  ],
+  "smoke_test": [
+    "cli readonly version",
+    "antigravity CDP readonly picker probe",
+    "google/gemini readonly catalog probe"
+  ],
+  "source_hbp": "D:\\AsolariaGuides\\omnidispatcher-fedenv-v1\\hyperbehcs-omnidispatcher-fedenv-v1-1000-hostnodes-2026-05-22.hbp",
+  "source_sha256": "0a9620f68db278c191f1dae1bd27418f6ccf072c54321e2e66d1ce7eaca69666"
+}

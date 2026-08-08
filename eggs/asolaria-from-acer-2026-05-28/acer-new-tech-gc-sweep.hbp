@@ -1,0 +1,4 @@
+GC-SWEEP-HEADER|class=non_destructive|policy=NEVER_DELETE_per_feedback_never_clean_live_disk|ts=2026-05-28T20:51:38.953Z
+GC-INVENTORY|paths_scanned=5|total_files=10493|total_bytes=7820411|total_MB=7.46|class=hbp_quintet_only|sha16=90b4bf5795776ef6
+GC-ACTION|action=INVENTORY_ONLY|deletions=0|retentions=10493|hashes_preserved=true|cold_archive_eligible=files_older_than_30_days
+GC-FOOTER|ts=2026-05-28T20:51:39.423Z

@@ -1,0 +1,8 @@
+AUTO-TRANSLATE-HEADER|languages=4|pipe_topology=full_mesh|bidirectional=true|ts=2026-05-28T20:51:39.424Z
+TRANSLATE-EXAMPLE|name=GS-1E200-00|BEHCS-256=cp00b1|BEHCS-1024=cp01b1|sha16-hash=09b132b0f28932a3|glyph_5_apex=★00b1|pipe_direction=any_to_any_via_pid_canonical_identity
+TRANSLATE-EXAMPLE|name=GS-1E200-01|BEHCS-256=cp00d1|BEHCS-1024=cp00d1|sha16-hash=10d19de2d4de89d9|glyph_5_apex=★00d1|pipe_direction=any_to_any_via_pid_canonical_identity
+TRANSLATE-EXAMPLE|name=GS-1E200-02|BEHCS-256=cp007d|BEHCS-1024=cp027d|sha16-hash=927db0f3aa897e6b|glyph_5_apex=★007d|pipe_direction=any_to_any_via_pid_canonical_identity
+TRANSLATE-EXAMPLE|name=GS-1E200-03|BEHCS-256=cp009e|BEHCS-1024=cp039e|sha16-hash=779eef3463d39e5e|glyph_5_apex=★009e|pipe_direction=any_to_any_via_pid_canonical_identity
+TRANSLATE-EXAMPLE|name=GS-1E200-04|BEHCS-256=cp0033|BEHCS-1024=cp0233|sha16-hash=0633ad4a1dfacee3|glyph_5_apex=★0033|pipe_direction=any_to_any_via_pid_canonical_identity
+AUTO-TRANSLATE-PIPE-CANON|256_to_1024=subset_embedding_actor_lt_256_identical|1024_to_256=fail_if_actor_gte_256|sha16_to_glyph=actor_mod_alphabet_then_glyphAt|glyph_to_sha16=lookup_via_pid_canonical_identity
+AUTO-TRANSLATE-FOOTER|ts=2026-05-28T20:51:39.424Z|sha16=7fd690e20d081646

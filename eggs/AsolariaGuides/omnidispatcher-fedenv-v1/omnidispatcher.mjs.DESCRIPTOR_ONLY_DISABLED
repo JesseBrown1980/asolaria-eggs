@@ -1,0 +1,18 @@
+// OMNIDISPATCHER-v1 DESCRIPTOR ONLY — DO NOT RUN
+// runtime=0 promote=0 daemon_spawn=0 endpoint=0
+// Purpose: implementation sketch for one parent process holding 1000 pre-bound HOSTNODE-v1 slots.
+export const FEDENV_V1_FIELDS = [
+  'caller_pid','target','verb','payload_ref','back_address','cube_47d','glyph_1024','lease_token','antecedents','runtime','promote','row_hash'
+];
+export const SLOT_POPULATION = { cli:9, remoteVantageCitizens:22, metaSupervisors:6, antigravityPickerModels:7, googleSurfaceBindings:37, daemonProxySlots:341, reserveFractalSubagents:578, total:1000 };
+export const PORTS = { fedenvBus:4947, httpMirror:4950, sisterHotStandby:4956 };
+export const HARD_HOLDS = ['no-daemon-restart','no-1000-spawn','no-MCP-enable','no-WebMCP-enable','no-USB-write','no-Atlas-cp-mint','no-runtime-promotion','no-depth3-SDK-recursion'];
+export function routeTargetDescriptorOnly(target) {
+  if (target.startsWith('cli:')) return 'multi-cli-invoke';
+  if (target.startsWith('antigravity:')) return 'omniscrcpy-antigravity-proxy';
+  if (target.startsWith('google:')) return 'google-api-client';
+  if (target.startsWith('citizen:')) return 'citizen-stub-queue';
+  if (target.startsWith('daemon:')) return 'daemon-direct-or-bus-replay';
+  if (target.startsWith('bus:')) return 'bus-4947-room';
+  return 'white-room-halt-unknown-target';
+}

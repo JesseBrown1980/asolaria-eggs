@@ -1,0 +1,12 @@
+MK-CASCADE-SUPERVISOR-STACK|cascade=mk-cascade-1779990440799|hilbert_band=830-839|class=mk-cascade-canon-witness|ts=2026-05-28T20:42:21.170Z|sha16=3792e9eb2e6b2630
+SUPERVISOR|name=SUP-MK-SCOUT|hilbert=830|role=wave-0-scout-aggregator|pid=f1589d014c1002d8|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=434c7317ffe1d590
+SUPERVISOR|name=SUP-MK-EVIDENCE|hilbert=831|role=wave-1-evidence-aggregator|pid=8d86dda63f6c3bff|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=e14ec24d63931b62
+SUPERVISOR|name=SUP-MK-EXECUTOR|hilbert=832|role=wave-2-executor-aggregator|pid=d9d387aff5e69c60|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=c4d992bc4df9d2cf
+SUPERVISOR|name=SUP-MK-FABRIC|hilbert=833|role=wave-3-fabric-aggregator|pid=08c5776de529ab3a|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=472a9d40043282e3
+SUPERVISOR|name=SUP-MK-VOICE|hilbert=834|role=wave-4-voice-aggregator|pid=0273c534a582b6e0|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=4fe4ef91ea3bb542
+SUPERVISOR|name=SUP-MK-PLANNER|hilbert=835|role=wave-5-planner-aggregator|pid=cc20ae9d27a54b93|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=e7f0e5d287f50787
+SUPERVISOR|name=SUP-MK-GENIUS-AGG|hilbert=836|role=cross-cutting-genius-326M-aggregator|pid=4f18588d34e33f93|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=2d8bdedf35d4beaa
+SUPERVISOR|name=SUP-MK-MISTAKE-AGG|hilbert=837|role=cross-cutting-mistake-326M-aggregator|pid=a883e95686672a9d|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=8e2960d7fb31582e
+SUPERVISOR|name=SUP-MK-LANE-BAL|hilbert=838|role=lane-balancer-7-uniform-distribution-verifier|pid=26d25cb3f2071355|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=6d136da9654f02fa
+SUPERVISOR|name=SUP-MK-CASCADE-ORCH|hilbert=839|role=cascade-orchestrator-worker-pool-coordinator|pid=c566fd1a571b0453|cascade=mk-cascade-1779990440799|status=CANON_CANDIDATE_OPERATOR_WITNESSED_via_quintuple_seq_3471|sha16=6a00ac47f058e961
+MK-CASCADE-SUPERVISOR-STACK-FOOTER|count=10|hilbert_range=830-839|ts=2026-05-28T20:42:21.170Z|sha16=b2906c80ebaa90cf

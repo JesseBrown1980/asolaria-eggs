@@ -1,0 +1,4 @@
+SHANNON-HEADER|sample_files=100|total_packets_sampled=65318400|lane_count=7|ts=2026-05-28T20:51:38.952Z
+LANE-PROBS|lane0=0.142857|lane1=0.142857|lane2=0.142857|lane3=0.142857|lane4=0.142857|lane5=0.142857|lane6=0.142857
+SHANNON-H=2.807355|max_H_log2_7=2.807355|efficiency=1.000000|interpretation=near_maximum_uniform_distribution|sha16=461f09556c26f210
+SHANNON-FOOTER|ts=2026-05-28T20:51:38.952Z

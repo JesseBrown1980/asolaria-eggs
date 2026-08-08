@@ -1,0 +1,11 @@
+HBI|source=hyperbehcs-omnidispatcher-fedenv-v1-1000-hostnodes-2026-05-22.hbp|rows=10|sha256=0a9620f68db278c191f1dae1bd27418f6ccf072c54321e2e66d1ce7eaca69666|advisor=GUIDED-EXECUTE|audit_row_hash=f1cdd102fa5f4d8b|ts=2026-05-22T20:21:26Z
+HBI-ROW|n=1|layer=omnidispatcher-fedenv-v1-anchor|row_hash=f1cdd102fa5f4d8b
+HBI-ROW|n=2|layer=fedenv-v1-schema|row_hash=83d5901ca1cb8253
+HBI-ROW|n=3|layer=hostnode-v1-schema|row_hash=4eef78e37aea8e1d
+HBI-ROW|n=4|layer=omnidispatcher-v1-parent-spec|row_hash=206390dd93c0808b
+HBI-ROW|n=5|layer=slot-population-1000|row_hash=122da7adba6100b1
+HBI-ROW|n=6|layer=ring-boot-plan|row_hash=18665ea19f69dae6
+HBI-ROW|n=7|layer=ram-budget|row_hash=c3560e427d48b356
+HBI-ROW|n=8|layer=white-room-boundaries|row_hash=03b2cf90568931d8
+HBI-ROW|n=9|layer=three-slot-smoke-test-plan|row_hash=930706cd5cc198b4
+HBI-ROW|n=10|layer=activation-answer|row_hash=615c0af54ede2bad

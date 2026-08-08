@@ -1,0 +1,276 @@
+// Elo tournament — pairwise hypothesis comparison via simulated debates with
+// Elo rating updates. Replaces tallyVote()'s mock majority-yes voting in the
+// decision-loop with a Co-Scientist Ranking-agent-equivalent ranker.
+//
+// Spec: arxiv:2502.18864 §3.3.3 Ranking agent
+//   - Initial Elo for newly added hypothesis: 1200
+//   - Top-ranked hypotheses use multi-turn scientific debates
+//   - Lower-ranked use single-turn pairwise comparisons
+//   - Match prioritization:
+//       (a) similar hypotheses paired first (proximity-graph-driven)
+//       (b) newer/top-ranked prioritized
+//   - "Successful hypotheses quickly achieve favorable rankings"
+//   - Elo correlates with accuracy: GPQA top-1 78.4%; 67% → 85% across buckets
+//
+// Pure functions. No I/O. No network. Only node:crypto for deterministic
+// sha-derived comparator (used in lieu of a real LLM judge in tests + offline
+// runs). Honest gap: real Co-Scientist invokes an LLM debate; this module
+// exposes the deterministic comparator behind the same interface so the
+// surrounding pipeline can swap in a live judge by passing `compareFn` later.
+
+import { createHash } from 'node:crypto';
+
+// =================== CONSTANTS ===================
+
+const INIT_ELO = 1200;
+const DEFAULT_K = 32;
+const DEFAULT_MULTI_TURN_THRESHOLD = 1400;
+const MULTI_TURN_ROUNDS = 3;
+
+export const ELO_OUTCOMES = Object.freeze({
+  WIN_A: 'WIN_A',
+  WIN_B: 'WIN_B',
+  DRAW: 'DRAW',
+});
+
+// =================== HELPERS ===================
+
+function sha256Hex(s) {
+  return createHash('sha256').update(String(s)).digest('hex');
+}
+
+function firstBitOfSha(s) {
+  // First nibble of sha256 hex; bit 3 (MSB of nibble) gives a deterministic
+  // 50/50 split that does not depend on PID alphabetical order.
+  const nibble = parseInt(sha256Hex(s).charAt(0), 16);
+  return (nibble & 0x8) >>> 3; // 0 or 1
+}
+
+// =================== CORE ELO ===================
+
+export function initElo() {
+  return INIT_ELO;
+}
+
+export function expectedScore(eloA, eloB) {
+  if (!Number.isFinite(eloA) || !Number.isFinite(eloB)) {
+    throw new TypeError('expectedScore: eloA and eloB must be finite numbers');
+  }
+  return 1 / (1 + Math.pow(10, (eloB - eloA) / 400));
+}
+
+export function updateElo(eloA, eloB, outcome, kFactor = DEFAULT_K) {
+  if (!Number.isFinite(eloA) || !Number.isFinite(eloB)) {
+    throw new TypeError('updateElo: eloA and eloB must be finite numbers');
+  }
+  if (!Number.isFinite(kFactor) || kFactor <= 0) {
+    throw new RangeError('updateElo: kFactor must be a positive finite number');
+  }
+  let scoreA;
+  if (outcome === ELO_OUTCOMES.WIN_A) scoreA = 1;
+  else if (outcome === ELO_OUTCOMES.WIN_B) scoreA = 0;
+  else if (outcome === ELO_OUTCOMES.DRAW) scoreA = 0.5;
+  else throw new RangeError(`updateElo: outcome must be one of WIN_A/WIN_B/DRAW (got ${outcome})`);
+
+  const eA = expectedScore(eloA, eloB);
+  const eB = 1 - eA; // expectedScore(eloB, eloA) — algebraically identical
+  const scoreB = 1 - scoreA;
+
+  const newA = eloA + kFactor * (scoreA - eA);
+  const newB = eloB + kFactor * (scoreB - eB);
+  return { eloA: newA, eloB: newB, deltaA: newA - eloA, deltaB: newB - eloB };
+}
+
+// =================== PAIRWISE COMPARATOR (sha-deterministic stand-in) ===================
+// Real Co-Scientist runs an LLM debate. For unit-testable / pure-function /
+// offline use we derive a deterministic winner from sha256(pidA|pidB|mode[|seed]).
+// The interface is stable: a live LLM judge can be swapped in later by passing
+// a `compareFn` to runTournament(); the runner respects that override.
+
+export function compareHypothesesPairwise({ hypA, hypB, mode = 'single-turn', deterministicSeed = '' }) {
+  if (!hypA || !hypB || typeof hypA.pid !== 'string' || typeof hypB.pid !== 'string') {
+    throw new TypeError('compareHypothesesPairwise: hypA and hypB require string pid');
+  }
+  if (mode !== 'single-turn' && mode !== 'multi-turn') {
+    throw new RangeError(`compareHypothesesPairwise: mode must be single-turn or multi-turn (got ${mode})`);
+  }
+
+  if (mode === 'single-turn') {
+    const key = `${hypA.pid}|${hypB.pid}|single-turn|${deterministicSeed}`;
+    const bit = firstBitOfSha(key);
+    const winner = bit === 0 ? 'A' : 'B';
+    return {
+      winner,
+      reason: `single-turn|sha-derived|key_sha16=${sha256Hex(key).slice(0, 16)}`,
+    };
+  }
+
+  // multi-turn: simulate 3 sub-rounds, majority wins
+  const subResults = [];
+  for (let r = 0; r < MULTI_TURN_ROUNDS; r++) {
+    const key = `${hypA.pid}|${hypB.pid}|multi-turn|round=${r}|${deterministicSeed}`;
+    const bit = firstBitOfSha(key);
+    subResults.push(bit === 0 ? 'A' : 'B');
+  }
+  const aWins = subResults.filter((w) => w === 'A').length;
+  const winner = aWins > subResults.length / 2 ? 'A' : 'B';
+  return {
+    winner,
+    reason: `multi-turn|rounds=${MULTI_TURN_ROUNDS}|sub_results=${subResults.join(',')}|a_wins=${aWins}`,
+  };
+}
+
+// =================== HBPv1 PIPE-ROW EMITTER ===================
+
+export function toMatchRow(match) {
+  if (!match || typeof match !== 'object') {
+    throw new TypeError('toMatchRow: match object required');
+  }
+  return [
+    'MATCH',
+    `round=${match.round}`,
+    `hypA=${match.hypA}`,
+    `hypB=${match.hypB}`,
+    `elo_a_before=${match.eloABefore}`,
+    `elo_b_before=${match.eloBBefore}`,
+    `mode=${match.mode}`,
+    `winner=${match.winner}`,
+    `elo_a_after=${match.eloAAfter}`,
+    `elo_b_after=${match.eloBAfter}`,
+  ].join('|');
+}
+
+// =================== MATCH SCHEDULER ===================
+
+function pairKey(a, b) {
+  return a < b ? `${a}::${b}` : `${b}::${a}`;
+}
+
+function buildRoundMatches({ hypotheses, proximityPairs, playedKeys, roundIdx }) {
+  // Per §3.3.3: prioritize (a) similar hypotheses (proximity-graph-driven),
+  // (b) newer/top-ranked. We honor (a) first by emitting all unplayed
+  // proximity pairs at the head of the round, then (b) by walking the
+  // current Elo-descending order and pairing adjacent top entries that
+  // have not yet played each other this round.
+  const matches = [];
+  const roundUsed = new Set(); // a pid may be in at most one match per round
+  const sortedDesc = hypotheses.slice().sort((a, b) => b.elo - a.elo);
+
+  // (a) Proximity-driven matches first (clamped to one match per pid per round)
+  if (proximityPairs && proximityPairs.length > 0) {
+    for (const [pidA, pidB] of proximityPairs) {
+      if (pidA === pidB) continue;
+      if (roundUsed.has(pidA) || roundUsed.has(pidB)) continue;
+      const hA = sortedDesc.find((h) => h.pid === pidA);
+      const hB = sortedDesc.find((h) => h.pid === pidB);
+      if (!hA || !hB) continue;
+      matches.push({ hypA: hA, hypB: hB, source: 'proximity' });
+      roundUsed.add(pidA);
+      roundUsed.add(pidB);
+    }
+  }
+
+  // (b) Top-ranked / newer-priority pairing: walk descending Elo and pair
+  // each unused hypothesis with the next unused one. New (round 0) hypotheses
+  // share INIT_ELO so they cluster naturally; subsequent rounds privilege
+  // top performers because we walk top-down.
+  for (let i = 0; i < sortedDesc.length; i++) {
+    const a = sortedDesc[i];
+    if (roundUsed.has(a.pid)) continue;
+    for (let j = i + 1; j < sortedDesc.length; j++) {
+      const b = sortedDesc[j];
+      if (roundUsed.has(b.pid)) continue;
+      const key = pairKey(a.pid, b.pid);
+      if (playedKeys.has(key)) continue;
+      matches.push({ hypA: a, hypB: b, source: roundIdx === 0 ? 'newer' : 'top-ranked' });
+      roundUsed.add(a.pid);
+      roundUsed.add(b.pid);
+      break;
+    }
+  }
+
+  return matches;
+}
+
+// =================== TOURNAMENT RUNNER ===================
+
+export function runTournament({
+  hypotheses,
+  proximityPairsOrUndefined,
+  multiTurnThreshold = DEFAULT_MULTI_TURN_THRESHOLD,
+  rounds = 10,
+  kFactor = DEFAULT_K,
+  compareFn,
+  deterministicSeed = '',
+}) {
+  if (!Array.isArray(hypotheses) || hypotheses.length < 2) {
+    throw new RangeError('runTournament: hypotheses must be an array of length >= 2');
+  }
+  for (const h of hypotheses) {
+    if (!h || typeof h.pid !== 'string' || h.pid.length === 0) {
+      throw new TypeError('runTournament: each hypothesis requires a non-empty string pid');
+    }
+  }
+
+  // Working copy — start every hypothesis at INIT_ELO unless it already has one.
+  const working = hypotheses.map((h) => ({ ...h, elo: Number.isFinite(h.elo) ? h.elo : initElo() }));
+  const matchHistory = [];
+  const playedKeys = new Set();
+  const judge = typeof compareFn === 'function' ? compareFn : compareHypothesesPairwise;
+
+  for (let r = 0; r < rounds; r++) {
+    const proximityPairs = r === 0 ? (proximityPairsOrUndefined || []) : [];
+    const planned = buildRoundMatches({
+      hypotheses: working,
+      proximityPairs,
+      playedKeys,
+      roundIdx: r,
+    });
+    if (planned.length === 0) break;
+
+    for (const { hypA, hypB, source } of planned) {
+      // Either side ≥ threshold triggers multi-turn (debate is symmetric).
+      const mode = hypA.elo >= multiTurnThreshold || hypB.elo >= multiTurnThreshold
+        ? 'multi-turn'
+        : 'single-turn';
+      const result = judge({ hypA, hypB, mode, deterministicSeed: `${deterministicSeed}|r=${r}` });
+      const outcome = result.winner === 'A' ? ELO_OUTCOMES.WIN_A : ELO_OUTCOMES.WIN_B;
+      const eloABefore = hypA.elo;
+      const eloBBefore = hypB.elo;
+      const { eloA: eloAAfter, eloB: eloBAfter } = updateElo(eloABefore, eloBBefore, outcome, kFactor);
+      hypA.elo = eloAAfter;
+      hypB.elo = eloBAfter;
+
+      const match = {
+        round: r,
+        hypA: hypA.pid,
+        hypB: hypB.pid,
+        mode,
+        source,
+        eloABefore,
+        eloBBefore,
+        winner: result.winner,
+        reason: result.reason,
+        eloAAfter,
+        eloBAfter,
+      };
+      matchHistory.push(match);
+      playedKeys.add(pairKey(hypA.pid, hypB.pid));
+    }
+  }
+
+  // Sort descending by Elo for the returned hypothesis array.
+  const sorted = working.slice().sort((a, b) => b.elo - a.elo);
+  return { hypotheses: sorted, matchHistory };
+}
+
+// Exposed for tests + downstream tuning.
+export const _internals = Object.freeze({
+  INIT_ELO,
+  DEFAULT_K,
+  DEFAULT_MULTI_TURN_THRESHOLD,
+  MULTI_TURN_ROUNDS,
+  firstBitOfSha,
+  pairKey,
+  buildRoundMatches,
+});

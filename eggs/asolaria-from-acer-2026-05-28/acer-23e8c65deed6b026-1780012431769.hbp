@@ -1,0 +1,14 @@
+FED-UPGRADE-SUMMARY|cascade=fed-upgrade-1780012407030|sectors=5|total_hypotheses=100|total_agents=5000000|wallClock_sec=10.04|pid_office_registered=5|mean_accept_rate=1.000000|sigma=0.000000|ts=2026-05-28T23:53:37.075Z
+SECTOR|id=ROBIN-BIOLOGY|paper=Robin-Nature-2026|chief_pid=49bd3d014c59e3b1|hyps=20|accepted=20|top_elo=1272|prox_edges=9|evolved=1|wallClock_ms=9940
+SECTOR-META|id=ROBIN-BIOLOGY|critique=META-REVIEW iter=1 FEEDBACK: ROBIN-BIOLOGY accepted 20/20, top-Elo 1272, 9 proximity-edges, 1 evolved hypotheses.
+SECTOR|id=CO-SCIENTIST-HYPOTHESIS|paper=Google-AI-CoScientist-2025|chief_pid=7097372db323e09d|hyps=20|accepted=20|top_elo=1278|prox_edges=10|evolved=1|wallClock_ms=9792
+SECTOR-META|id=CO-SCIENTIST-HYPOTHESIS|critique=META-REVIEW iter=1 FEEDBACK: CO-SCIENTIST-HYPOTHESIS accepted 20/20, top-Elo 1278, 10 proximity-edges, 1 evolved hypotheses.
+SECTOR|id=SIMULA-SYNTHETIC-DATA|paper=Simula-TMLR-2026|chief_pid=4ff68ebf3004c75f|hyps=20|accepted=20|top_elo=1265|prox_edges=10|evolved=1|wallClock_ms=9700
+SECTOR-META|id=SIMULA-SYNTHETIC-DATA|critique=META-REVIEW iter=1 FEEDBACK: SIMULA-SYNTHETIC-DATA accepted 20/20, top-Elo 1265, 10 proximity-edges, 1 evolved hypotheses.
+SECTOR|id=SAKANA-PAPER-PIPELINE|paper=Sakana-AI-Scientist-2024|chief_pid=7944b5e60798a17c|hyps=20|accepted=20|top_elo=1281|prox_edges=10|evolved=1|wallClock_ms=9811
+SECTOR-META|id=SAKANA-PAPER-PIPELINE|critique=META-REVIEW iter=1 FEEDBACK: SAKANA-PAPER-PIPELINE accepted 20/20, top-Elo 1281, 10 proximity-edges, 1 evolved hypotheses.
+SECTOR|id=BOIKO-CHEMISTRY-LAB|paper=Boiko-Coscientist-Nature-2023|chief_pid=d3eede8c38ec4532|hyps=20|accepted=20|top_elo=1279|prox_edges=9|evolved=1|wallClock_ms=9797
+SECTOR-META|id=BOIKO-CHEMISTRY-LAB|critique=META-REVIEW iter=1 FEEDBACK: BOIKO-CHEMISTRY-LAB accepted 20/20, top-Elo 1279, 9 proximity-edges, 1 evolved hypotheses.
+PIPELINE-COVERAGE|generation=PASS|reflection=PASS|ranking_elo=PASS|proximity=PASS|evolution=PASS|meta_review=PASS|six_primitives_all_applied=true
+PID-OFFICE-SUMMARY|path=D:/PID-Registration-Office|registered=5|auto_registration_active=true
+FED-UPGRADE-FOOTER|endTs=2026-05-28T23:53:37.075Z

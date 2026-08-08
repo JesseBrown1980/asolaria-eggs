@@ -1,0 +1,11 @@
+[package]
+name = "new-rime-trit-system"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "rime-trit"
+path = "src/main.rs"

@@ -1,0 +1,134 @@
+# Asolaria-Grade Universal Date-Ingest Normalizer — Design Doc
+
+**Author:** Asolaria-Instance-G (Asolaria-Date-Normalizer-Author)
+**Operator:** OP-JESSE-DANIEL-BROWN
+**Date:** 2026-05-29
+**Methodology:** Hybrid 10-step (steps 1, 4, 5 captured here)
+**LAW anchor:** LAW-1M-1E200-BACKEND-RESEARCH-LOOP
+
+---
+
+## Step 1 — Brainstorming (3 architectural approaches)
+
+### A. Single-parser-with-shape-detector (winner-take-all)
+
+A single dispatcher inspects the input, classifies its `InputShape`, then calls one matching parser. One emitter, one branch, one Date out.
+
+- Pros: simple, low overhead, deterministic, easy to audit.
+- Cons: shape detector becomes the only line of defence; a misclassification silently picks the wrong parser.
+- Risk: ambiguous strings (`03/04/2026` is US-Mar-04 or EU-Apr-03) collapse silently to whichever branch the detector chooses first.
+
+### B. Multi-parser-vote (Simula dual-critic native)
+
+Two independent parsers (native `Date` constructor + `date-fns/parse` with format chain, or `date-fns` + `moment`) each propose a `Date`. If they agree (within 1ms) → high confidence. If they disagree → raise an ambiguity flag, keep both candidates, route to operator-supervisor.
+
+- Pros: matches Simula dual-critic doctrine 1:1; honest about ambiguity instead of silent-default.
+- Cons: ~2x parse cost; needs reconciliation rules when both succeed differently.
+- Risk: false positives on naked numeric strings parsed differently by `Date` vs `date-fns`.
+
+### C. State-machine parser
+
+A hand-rolled state machine walks the input character-by-character and builds an AST of date tokens.
+
+- Pros: maximum correctness, complete audit trail.
+- Cons: high LOC, high maintenance, slow to build in a 1-turn time-box.
+- Risk: implementation bugs in the state machine itself become an opaque new failure surface.
+
+### Chosen: **B (multi-parser-vote) wrapping A (shape-detector pre-classify)**
+
+Shape detector first classifies into one of 13 shapes (cheap regex / typeof / range check), then routes to the appropriate dual-critic pair:
+
+- Strings: `native Date constructor` vs `date-fns parse with format chain`
+- Numbers: Excel-serial-formula vs epoch-ms/sec heuristic
+- Date objects: host-local-midnight heuristic vs UTC-anchored heuristic
+
+When the two critics disagree, `ambiguityFlags` records the divergence and `confidence` drops below 1.0. The operator-supervisor (caller upstream) decides whether to accept or quarantine.
+
+This is **B-over-A**, not B-or-A: A makes B cheap, B makes A honest.
+
+---
+
+## Step 4 — Co-Scientist Generation (3 design hypotheses)
+
+### H1. "Throw on ambiguity"
+Refuse to return a `Date` when critics disagree; throw a typed `AmbiguousDateError`. Calling code must catch.
+**Verdict:** rejected. Breaks LAW-1M-1E200 "no silent corruption" but also breaks ergonomics. Today's `fixTimeZone` returns a `Date` always; a drop-in must too.
+
+### H2. "Always return + flag"
+Always return a `Date` (the higher-confidence critic's pick), but populate `ambiguityFlags` and `confidence`. Caller can detect and route.
+**Verdict:** chosen. Drop-in compatible, audit-traced, honest.
+
+### H3. "Quarantine separately"
+Return a sentinel `Date(NaN)` for any ambiguous input, write the audit row to a quarantine sidecar, defer real result to async resolution.
+**Verdict:** rejected. Async / sidecar is out of scope for a synchronous TypeScript utility; sidecar I/O violates the "pure utility" contract.
+
+**Final:** H2.
+
+---
+
+## Step 5 — Simula Dual-Critic Critique (self-review before coding)
+
+### Structural critique
+
+- The shape-detector is a fast-path; if a shape is misclassified, the vote step still catches it because the unmatched-format critic returns `Invalid Date` and the agreement check fails. Self-healing.
+- `Date` constructor is locale-sensitive in older Node. We pin to ISO/numeric-only fast paths and avoid passing locale strings into `new Date(s)` directly when shape is `us-string` or `eu-string`.
+- Brown-Hilbert PID is `sha16(stringify(rawInput) + '|' + tz + '|' + shape)` — deterministic across runs, identifies the artefact across the federation ledger.
+- HBPv1 .ing row is a single pipe-delimited string per result, easy to grep/cat, never JSON in defaults (per QDD convention).
+
+### Behavioural critique
+
+- Empty / null / undefined input: returns `Date(NaN)` + ambiguity flag `empty-input`; caller decides. Today's `fixTimeZone` would `new Date(undefined)` which is also `NaN` but silent. We are strictly less bad.
+- US-vs-EU ambiguity (`03/04/2026`): both critics try US first (matching current `parseDate` behaviour and `resolveDateString` regex order); if EU heuristic (day > 12) clearly applies (`13/04/2026` cannot be US), we flip + flag. This preserves backward-compat with `fixTimeZone`'s `MM/dd/yyyy` interpretation while honestly flagging EU-likely strings.
+- Excel-serial: any positive number < 100000 is treated as Excel-serial; numbers > 10^11 are epoch-ms; 10^9..10^11 are epoch-sec. Tiebreaker: < 60 is rejected (per Excel's known 1900-leap bug zone) → ambiguity flag `excel-pre-1900-zone`.
+- Date object: if `getHours()==0 && getMinutes()==0 && getSeconds()==0 && getMilliseconds()==0`, AND the local-host year matches the UTC year, we treat as host-local-midnight (calendar marker). Otherwise UTC-anchored. Flag emitted either way.
+- `sampleTime` parameter: when present, overrides any time component on the date input. Matches current `fixTimeZone` semantics.
+- TZ unspecified: returns the host-local interpretation (matches current `fixTimeZone` no-tz branch) but flags `tz-unspecified`.
+
+### Honest gaps acknowledged up-front
+
+- EU-vs-US heuristic is best-effort, not omniscient. We flag, do not throw.
+- Time-only inputs anchor to "today" at the host. Caller should supply `sampleTime` separately for clean semantics.
+- 2-digit years route to date-fns' pivot year (50/50) — flagged `two-digit-year-pivot`.
+
+---
+
+## API (finalised — supersedes the proposal in the spec)
+
+```typescript
+export type InputShape =
+  | 'iso-string' | 'us-string' | 'eu-string'
+  | 'date-object-host-local' | 'date-object-utc-anchored'
+  | 'excel-serial-int' | 'excel-serial-fraction'
+  | 'epoch-ms' | 'epoch-sec' | 'combined-date-time-string'
+  | 'time-only-with-am-pm' | 'time-only-naked' | 'unknown';
+
+export interface DateIngestResult {
+  utcInstant: Date;
+  pid: string;
+  inputShape: InputShape;
+  timeZoneApplied: string;
+  ambiguityFlags: string[];
+  auditTraceRow: string;
+  confidence: number;
+}
+
+export function ingestDateAsolariaGrade(
+  input: unknown,
+  sampleTime?: unknown,
+  timeZone?: string
+): DateIngestResult;
+```
+
+## File layout
+
+- `asolaria-date-normalizer.design.md` (this file)
+- `asolaria-date-normalizer.ts` (~350 LOC implementation)
+- `asolaria-date-normalizer.unit.ts` (~250 LOC tests, one-per-shape minimum + ambiguity cases)
+
+## Plan (Step 3 — TDD red→green checklist)
+
+- [x] design doc (this file)
+- [ ] write tests file with one failing test per shape (RED)
+- [ ] implement module (GREEN)
+- [ ] run jest scoped, capture output (verification gate, Step 9)
+- [ ] aggregate report (cosign, Step 10)

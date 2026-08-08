@@ -1,0 +1,10 @@
+MK-CASCADE-SUMMARY|cascade=mk-cascade-1779990401792|kernels=100|workers=7|cpu_cores=8|total_packets=65318400|genius=3267470|mistake=3267581|wallClock_ms=16261|rate_per_sec=4016875|ts=2026-05-28T17:46:58.056Z|sha16=fd8ae45e5ecb4e0d
+AGG-LANES|lane0=9331200|lane1=9331200|lane2=9331200|lane3=9331200|lane4=9331200|lane5=9331200|lane6=9331200|sha16=ff1789b2348ddbc2
+WORKER|w=0|range=0-14|packets=9797760|genius=489698|mistake=488927|sha16=762036e1ef0cea72
+WORKER|w=1|range=15-29|packets=9797760|genius=490049|mistake=490048|sha16=60c5590f72eef292
+WORKER|w=2|range=30-44|packets=9797760|genius=490054|mistake=490599|sha16=06f8faea3b5f6976
+WORKER|w=3|range=45-59|packets=9797760|genius=489474|mistake=490454|sha16=55eae50b75e2b299
+WORKER|w=4|range=60-74|packets=9797760|genius=490957|mistake=490870|sha16=879cc67a846b570c
+WORKER|w=5|range=75-89|packets=9797760|genius=490399|mistake=489962|sha16=bb349f269976d971
+WORKER|w=6|range=90-99|packets=6531840|genius=326839|mistake=326721|sha16=d5bc18f597828210
+MK-CASCADE-FOOTER|endTs=2026-05-28T17:46:58.056Z|results_dir=D:\asolaria-micro-kernels-v1\results-mk-cascade-1779990401792|sha16=0301844ccd8e9ca7
