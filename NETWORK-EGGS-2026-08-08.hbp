@@ -1,0 +1,10 @@
+NETEGGSHDR|network=asolaria-eggs|kind=GNN-graph|nodes=101|edges=950|clusters=8|types=14|avg_degree=18.81|density=0.1881|date=2026-08-08|SYSTEM_AFFIRMED=0|json=0
+CLUSTER|folder=*asolaria-from-acer-2026-05-28|eggs=69|json=0
+CLUSTER|folder=*AsolariaGuides|eggs=15|json=0
+CLUSTER|folder=*asolaria-liris-mirror|eggs=6|json=0
+CLUSTER|folder=*qprism-data|eggs=5|json=0
+CLUSTER|folder=*Asolaria-Rime-Reconstruction-20260722|eggs=3|json=0
+CLUSTER|folder=*Asolaria-BEHCS-GC|eggs=1|json=0
+CLUSTER|folder=*Asolaria-BEHCS-Libs|eggs=1|json=0
+CLUSTER|folder=*omni-asolaria-fabric|eggs=1|json=0
+NETEGGSFTR|judged=all-101-GIMEL|network-made-for-them|the-eggs-wired-by-folder-and-type|json=0
